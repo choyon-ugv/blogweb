@@ -1,0 +1,86 @@
+{% extends 'blog/base.html' %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Create New Post</h1>
+    <form method="post" enctype="multipart/form-data" id="postForm">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="{{ form.title.id_for_label }}" class="form-label">Title</label>
+            {{ form.title }}
+        </div>
+        <div class="mb-3">
+            <label for="{{ form.content.id_for_label }}" class="form-label">Content</label>
+            {{ form.content }}
+        </div>
+        <div class="mb-3">
+            <label for="{{ form.image.id_for_label }}" class="form-label">Image (optional)</label>
+            <input type="file" name="image" id="imageInput" class="form-control" accept="image/*">
+            <small class="text-muted">Max size: 2MB</small>
+            <img id="imagePreview" src="#" alt="Preview" style="max-width: 150px; max-height: 150px; display: none; margin-top: 10px;">
+        </div>
+        <button type="submit" class="btn btn-primary">Create Post</button>
+    </form>
+</div>
+
+<script>
+document.getElementById("imageInput").addEventListener("change", function(event) {
+    let file = event.target.files[0];
+    if (file) {
+        // Validate size (max 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            alert("Image file size should not exceed 2MB.");
+            event.target.value = ""; // Reset file input
+            return;
+        }
+
+        // Preview the image
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            let img = document.getElementById("imagePreview");
+            img.src = e.target.result;
+            img.style.display = "block";
+        };
+        reader.readAsDataURL(file);
+
+        // Resize the image before upload (optional)
+        let canvas = document.createElement("canvas");
+        let ctx = canvas.getContext("2d");
+        let img = new Image();
+        img.src = URL.createObjectURL(file);
+        img.onload = function() {
+            let maxWidth = 300; // Resize width
+            let maxHeight = 300; // Resize height
+            let width = img.width;
+            let height = img.height;
+
+            // Maintain aspect ratio
+            if (width > height) {
+                if (width > maxWidth) {
+                    height *= maxWidth / width;
+                    width = maxWidth;
+                }
+            } else {
+                if (height > maxHeight) {
+                    width *= maxHeight / height;
+                    height = maxHeight;
+                }
+            }
+
+            // Set canvas size and draw
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Convert to blob and replace file
+            canvas.toBlob(function(blob) {
+                let resizedFile = new File([blob], file.name, { type: "image/jpeg", lastModified: Date.now() });
+                let dataTransfer = new DataTransfer();
+                dataTransfer.items.add(resizedFile);
+                document.getElementById("imageInput").files = dataTransfer.files;
+            }, "image/jpeg", 0.8); // Compression quality
+        };
+    }
+});
+</script>
+{% endblock %}
